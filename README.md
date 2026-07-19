@@ -1,0 +1,1 @@
+# Automated-CI-CD-Pipeline-with-GitHub-Actions-Docker-and-Trivy
