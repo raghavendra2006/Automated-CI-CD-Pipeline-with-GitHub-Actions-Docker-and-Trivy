@@ -1,0 +1,143 @@
+name: CI/CD Pipeline
+
+# Define the events that trigger the workflow
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+# Grant the GITHUB_TOKEN permission to write to GitHub Packages (GHCR)
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ============================================================
+  # Job 1: Continuous Integration (CI)
+  # Runs on Pull Requests to validate code quality before merge
+  # ============================================================
+  ci-pipeline:
+    # Ensure this job only runs on Pull Requests, not on direct pushes to main
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          # Enable npm caching to speed up subsequent pipeline runs
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Linter
+        run: npm run lint --if-present
+
+      - name: Run Tests
+        run: npm test
+
+  # ============================================================
+  # Job 2: Build, Scan & Push (CD)
+  # Runs when code is pushed/merged to main branch
+  # Builds Docker image, scans with Trivy, pushes to GHCR
+  # ============================================================
+  build-and-scan:
+    # This job only runs when code is pushed/merged to the main branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Set Image Tag
+        # Use the first 7 characters of the git commit SHA as a unique identifier
+        id: vars
+        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build Docker Image
+        run: |
+          docker build -t my-app:${{ steps.vars.outputs.tag }} .
+
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'my-app:${{ steps.vars.outputs.tag }}'
+          format: 'table'
+          # Force the pipeline to exit with code 1 (fail) if HIGH or CRITICAL issues are found
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          # Use the default GitHub token for authentication
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag Image for GHCR
+        # Convert repository name to lowercase as Docker requires lowercase names
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker tag my-app:${{ steps.vars.outputs.tag }} ghcr.io/$REPO_LOWER/my-app:${{ steps.vars.outputs.tag }}
+          docker tag my-app:${{ steps.vars.outputs.tag }} ghcr.io/$REPO_LOWER/my-app:latest
+
+      - name: Push Image to GHCR
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker push ghcr.io/$REPO_LOWER/my-app:${{ steps.vars.outputs.tag }}
+          docker push ghcr.io/$REPO_LOWER/my-app:latest
+
+  # ============================================================
+  # Job 3: Deploy to Staging
+  # Automatically deploys after successful build, scan & push
+  # ============================================================
+  deploy-staging:
+    # This job requires the build-and-scan job to complete successfully
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Simulate Staging Deployment
+        run: |
+          echo "============================================"
+          echo "  Deploying image to STAGING environment..."
+          echo "============================================"
+          echo "Pulling from GHCR..."
+          echo "Running pre-deployment health checks..."
+          echo "Deployment to staging successful!"
+          echo "============================================"
+
+  # ============================================================
+  # Job 4: Deploy to Production
+  # Requires manual approval via GitHub Environments protection rules
+  # ============================================================
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    # Targeting this specific environment triggers the approval gate
+    environment: production
+
+    steps:
+      - name: Simulate Production Deployment
+        run: |
+          echo "============================================"
+          echo "  Manual approval received."
+          echo "  Deploying image to PRODUCTION environment..."
+          echo "============================================"
+          echo "Pulling verified image from GHCR..."
+          echo "Running zero-downtime deployment..."
+          echo "Deployment to production successful!"
+          echo "============================================"
