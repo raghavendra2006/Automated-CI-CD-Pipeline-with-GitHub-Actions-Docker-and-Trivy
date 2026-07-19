@@ -1,0 +1,11 @@
+# Trivy Ignore File
+# ==================
+# This file lists CVE IDs that Trivy should ignore during vulnerability scanning.
+# These are typically vulnerabilities in the base OS image (node:18-alpine) that
+# have no available fix upstream, or are false positives for our use case.
+#
+# Each entry should be reviewed periodically and removed once a fix is available.
+# Format: One CVE ID per line.
+#
+# Example:
+# CVE-2023-XXXXX
