@@ -34,6 +34,9 @@ COPY package*.json ./
 # Install ONLY production dependencies
 RUN npm ci --only=production
 
+# REMOVE npm and npx to eliminate internal vulnerabilities and reduce attack surface
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 # Copy the source code from the builder stage
 COPY --from=builder /app/src ./src
 
@@ -45,4 +48,5 @@ USER appuser
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+# Run the application directly with node instead of npm
+CMD ["node", "src/index.js"]
