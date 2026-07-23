@@ -3,6 +3,9 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# Update Alpine packages to patch known CVEs (e.g., OpenSSL vulnerabilities)
+RUN apk update && apk upgrade --no-cache
+
 # Copy package files first to leverage Docker layer caching
 COPY package*.json ./
 
@@ -16,6 +19,10 @@ COPY src/ ./src/
 # STAGE 2: Production Runtime
 # Start fresh from a slim alpine image
 FROM node:18-alpine AS production
+
+# Update Alpine packages to patch known CVEs (e.g., OpenSSL vulnerabilities)
+# This ensures libcrypto3 and libssl3 are updated to their latest patched versions
+RUN apk update && apk upgrade --no-cache
 
 # Set node environment to production
 ENV NODE_ENV=production
