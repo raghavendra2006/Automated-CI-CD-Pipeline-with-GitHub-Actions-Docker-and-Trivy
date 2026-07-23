@@ -21,8 +21,8 @@ jobs:
   # Runs on Pull Requests to validate code quality before merge
   # ============================================================
   ci-pipeline:
-    # Ensure this job only runs on Pull Requests, not on direct pushes to main
-    if: github.event_name == 'pull_request'
+    # Runs on Pull Requests or manual workflow_dispatch triggers
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
@@ -47,12 +47,12 @@ jobs:
 
   # ============================================================
   # Job 2: Build, Scan & Push (CD)
-  # Runs when code is pushed/merged to main branch
+  # Runs when code is pushed/merged to main branch or triggered manually
   # Builds Docker image, scans with Trivy, pushes to GHCR
   # ============================================================
   build-and-scan:
-    # This job only runs when code is pushed/merged to the main branch
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Runs on pushes to main or manual workflow_dispatch triggers
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
