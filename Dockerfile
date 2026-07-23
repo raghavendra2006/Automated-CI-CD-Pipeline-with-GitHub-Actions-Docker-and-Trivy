@@ -48,5 +48,9 @@ USER appuser
 
 EXPOSE 3000
 
+# Add health check for container orchestrators (Docker/Kubernetes)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1
+
 # Run the application directly with node instead of npm
 CMD ["node", "src/index.js"]

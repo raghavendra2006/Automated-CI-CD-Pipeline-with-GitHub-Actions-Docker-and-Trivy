@@ -27,10 +27,10 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           # Enable npm caching to speed up subsequent pipeline runs
@@ -69,7 +69,7 @@ jobs:
           docker build -t my-app:${{ steps.vars.outputs.tag }} .
 
       - name: Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: 'my-app:${{ steps.vars.outputs.tag }}'
           format: 'table'
@@ -82,7 +82,7 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           # Use the default GitHub token for authentication

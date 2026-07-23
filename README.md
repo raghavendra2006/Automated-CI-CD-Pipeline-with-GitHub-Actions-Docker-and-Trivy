@@ -122,6 +122,7 @@ ci-cd-project/
 | Tool | Purpose |
 |---|---|
 | **Node.js + Express** | Application runtime and API framework |
+| **Helmet** | HTTP security headers middleware |
 | **Jest + Supertest** | Unit testing and HTTP endpoint testing |
 | **ESLint** | Static code analysis and linting |
 | **Docker** | Containerization with multi-stage builds |
@@ -244,6 +245,10 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /app
 USER appuser
 CMD ["node", "src/index.js"]
+
+# Built-in health check for container orchestrators
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1
 ```
 
 ### Why Multi-Stage?
@@ -255,6 +260,7 @@ CMD ["node", "src/index.js"]
 | **Layer Caching** | `package.json` is copied before source code, so dependency layers are cached |
 | **Non-Root User** | The app runs as `appuser`, not root, following security best practices |
 | **OS Patching** | `apk upgrade` ensures Alpine packages (OpenSSL, etc.) are up to date |
+| **Health Check** | Built-in `HEALTHCHECK` allows Docker/Kubernetes to auto-restart unhealthy containers |
 
 ---
 
@@ -266,7 +272,7 @@ CMD ["node", "src/index.js"]
 
 ```yaml
 - name: Run Trivy Vulnerability Scanner
-  uses: aquasecurity/trivy-action@master
+  uses: aquasecurity/trivy-action@0.28.0
   with:
     image-ref: 'my-app:${{ steps.vars.outputs.tag }}'
     format: 'table'
@@ -274,6 +280,7 @@ CMD ["node", "src/index.js"]
     ignore-unfixed: true     # Skip CVEs with no available fix
     vuln-type: 'os,library'  # Scan both OS packages and app libraries
     severity: 'HIGH,CRITICAL' # Only flag HIGH and CRITICAL severity
+    trivyignores: '.trivyignore'  # Skip documented/risk-accepted CVEs
 ```
 
 ### Security Gate
