@@ -272,7 +272,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 ```yaml
 - name: Run Trivy Vulnerability Scanner
-  uses: aquasecurity/trivy-action@0.28.0
+  uses: aquasecurity/trivy-action@v0.29.0
   with:
     image-ref: 'my-app:${{ steps.vars.outputs.tag }}'
     format: 'table'
