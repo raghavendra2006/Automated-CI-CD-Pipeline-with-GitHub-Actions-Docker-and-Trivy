@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 # Grant the GITHUB_TOKEN permission to write to GitHub Packages (GHCR)
 permissions:
