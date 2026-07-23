@@ -223,17 +223,27 @@ The Dockerfile uses a **multi-stage build** strategy to produce a secure, minima
 # STAGE 1: Builder — installs ALL dependencies (including devDependencies)
 FROM node:18-alpine AS builder
 WORKDIR /app
+RUN apk update && apk upgrade --no-cache
 COPY package*.json ./
 RUN npm ci
 COPY src/ ./src/
 
 # STAGE 2: Production — only production dependencies + compiled artifacts
 FROM node:18-alpine AS production
+RUN apk update && apk upgrade --no-cache
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
+# Remove npm/npx to eliminate internal CVEs and reduce attack surface
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=builder /app/src ./src
+
+# Run as non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /app
+USER appuser
+CMD ["node", "src/index.js"]
 ```
 
 ### Why Multi-Stage?
@@ -241,9 +251,10 @@ COPY --from=builder /app/src ./src
 | Benefit | Description |
 |---|---|
 | **Smaller Image** | Final image excludes dev dependencies, test frameworks, and build tools |
-| **Reduced Attack Surface** | Fewer packages = fewer potential vulnerabilities |
+| **Reduced Attack Surface** | npm/npx stripped from production image, eliminating internal CVE noise |
 | **Layer Caching** | `package.json` is copied before source code, so dependency layers are cached |
 | **Non-Root User** | The app runs as `appuser`, not root, following security best practices |
+| **OS Patching** | `apk upgrade` ensures Alpine packages (OpenSSL, etc.) are up to date |
 
 ---
 
@@ -404,8 +415,9 @@ CVE-2023-XXXXX
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/health` | Health check — returns `{ status: 'UP' }` |
+| `GET` | `/health` | Health check — returns `{ status: 'UP', message: 'Service is healthy' }` |
 | `GET` | `/api/data` | Sample data — returns `{ data: ['item1', 'item2'] }` |
+| `GET` | `/api/version` | Version info — returns `{ version: '1.0.0', name: 'ci-cd-pipeline-app' }` |
 
 ---
 
