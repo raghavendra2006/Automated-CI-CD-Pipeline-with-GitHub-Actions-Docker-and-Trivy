@@ -10,4 +10,8 @@ app.get('/api/data', (req, res) => {
   res.status(200).json({ data: ['item1', 'item2'] });
 });
 
+app.get('/api/version', (req, res) => {
+  res.status(200).json({ version: '1.0.0', name: 'ci-cd-pipeline-app' });
+});
+
 module.exports = app;

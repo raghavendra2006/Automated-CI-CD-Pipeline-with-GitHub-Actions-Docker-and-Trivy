@@ -17,6 +17,13 @@ describe('API Endpoints', () => {
     expect(res.body.data).toEqual(['item1', 'item2']);
   });
 
+  it('should return version info on /api/version', async () => {
+    const res = await request(app).get('/api/version');
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toHaveProperty('version', '1.0.0');
+    expect(res.body).toHaveProperty('name', 'ci-cd-pipeline-app');
+  });
+
   it('should return 404 for unknown routes', async () => {
     const res = await request(app).get('/unknown');
     expect(res.statusCode).toEqual(404);
